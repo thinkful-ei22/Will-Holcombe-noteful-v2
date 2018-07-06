@@ -14,10 +14,11 @@ const hydrateNotes = require('../utils/hydrateNotes');
 
 // Get All (and search by query)
 router.get('/', (req, res, next) => {
+  console.log('ice cream');
   const { searchTerm, folderId, tagId } = req.query;
   knex
-    .select('notes.id', 'title', 'content', 'folders.id as folderId', 
-      'folders.name as folderName', 'tags.name as tag')
+    .select('notes.id', 'title', 'content', 'folders.id as folder_id', 
+      'folders.name as folderName', 'tags.name as tagName', 'tags.id as tagId')
     .from('notes')
     .leftJoin('folders', 'notes.folder_id', 'folders.id')
     .leftJoin('notes_tags', 'note_id', 'notes.id')
@@ -54,23 +55,18 @@ router.get('/', (req, res, next) => {
 // Get a single item
 router.get('/:id', (req, res, next) => {
   const{ id } = req.params;
+  console.log('It\'s ID time baby');
   const {tagId} = req.query;
   knex
-    .select('notes.id', 'title', 'content', 'folders.id as folderId', 
-      'folders.name as folderName', 'tags.name as tag')
+    .select('notes.id', 'title', 'content', 'folders.id as folder_id', 
+      'folders.name as folderName', 'tags.name as tagName', 'tags.id as tagId')
 
     .from('notes')
     .leftJoin('folders', 'notes.folder_id', 'folders.id') //why second two parameters?
-    .leftJoin('notes_tags', 'note_id', 'notes.id')
-    .leftJoin('tags', 'tag_id', 'tags.id')
-    .modify(queryBuilder => {
-      if (id) {
-        queryBuilder.where('notes.id', `${id}`);
-      }
-    })
-    .where('tags.id', tagId);
-      }
-    })
+    .leftJoin('notes_tags', 'notes.id', 'notes_tags.note_id')
+    .leftJoin('tags', 'tags.id', 'notes_tags.tag_id')
+    .where('notes.id', id)
+  
     .then(result => {
       if (result) {
         const hydrated = hydrateNotes(result);

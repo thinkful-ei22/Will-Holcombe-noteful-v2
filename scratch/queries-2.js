@@ -1,3 +1,7 @@
 'use strict';
 
-const knex = require('../knex');
+//const knex = require('../knex');
+
+const noteId = 99;
+const result = [34, 56, 78].map(tagId => ({ note_id: noteId, tag_id: tagId }));
+console.log(`insert: ${result} into notes_tags`);
