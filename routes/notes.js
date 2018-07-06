@@ -10,13 +10,18 @@ const router = express.Router();
 //const simDB = require('../db/simDB');
 //const notes = simDB.initialize(data);
 const knex = require('../knex');
+const hydrateNotes = require('../utils/hydrateNotes');
+
 // Get All (and search by query)
 router.get('/', (req, res, next) => {
-  const { searchTerm, folderId } = req.query;
+  const { searchTerm, folderId, tagId } = req.query;
   knex
-    .select('notes.id', 'title', 'content', 'folders.id as folderId', 'folders.name as folderName')
+    .select('notes.id', 'title', 'content', 'folders.id as folderId', 
+      'folders.name as folderName', 'tags.name as tag')
     .from('notes')
     .leftJoin('folders', 'notes.folder_id', 'folders.id')
+    .leftJoin('notes_tags', 'note_id', 'notes.id')
+    .leftJoin('tags', 'tag_id', 'tags.id')
     .modify(queryBuilder => {
       if (searchTerm) {
         queryBuilder.where('title', 'like', `%${searchTerm}%`);
@@ -27,9 +32,19 @@ router.get('/', (req, res, next) => {
         queryBuilder.where('folder_id', folderId);
       }
     })
+    .modify(function (queryBuilder) {
+      if (tagId) {
+        queryBuilder.where('tag_id', tagId);
+      }
+    })
     .orderBy('notes.id')
-    .then(results => {
-      res.json(results);
+    .then(result => {
+      if (result) {
+        const hydrated = hydrateNotes(result);
+        res.json(hydrated);
+      } else {
+        next();
+      }
     })
     .catch(err => {
       next(err);
@@ -39,19 +54,30 @@ router.get('/', (req, res, next) => {
 // Get a single item
 router.get('/:id', (req, res, next) => {
   const{ id } = req.params;
-
+  const {tagId} = req.query;
   knex
-    .select('notes.id', 'title', 'content', 'folders.id as folderId', 'folders.name as folderName')
+    .select('notes.id', 'title', 'content', 'folders.id as folderId', 
+      'folders.name as folderName', 'tags.name as tag')
 
     .from('notes')
     .leftJoin('folders', 'notes.folder_id', 'folders.id') //why second two parameters?
+    .leftJoin('notes_tags', 'note_id', 'notes.id')
+    .leftJoin('tags', 'tag_id', 'tags.id')
     .modify(queryBuilder => {
       if (id) {
         queryBuilder.where('notes.id', `${id}`);
       }
     })
+    .where('tags.id', tagId);
+      }
+    })
     .then(result => {
-      res.json(result);
+      if (result) {
+        const hydrated = hydrateNotes(result);
+        res.json(hydrated);
+      } else {
+        next();
+      }
     })
     .catch(err => {
       next(err);
@@ -61,7 +87,7 @@ router.get('/:id', (req, res, next) => {
 // Put update an item
 router.put('/:id', (req, res, next) => {
   //get id from params not body
- const id = req.params.id;
+  const id = req.params.id;
   const { title, content, folderId } = req.body;
   const updateItem = {
    
@@ -69,8 +95,8 @@ router.put('/:id', (req, res, next) => {
     content,
     folder_id: folderId
   };
- console.log(updateItem);
-//added to title - seems optional
+  console.log(updateItem);
+  //added to title - seems optional
   if (!updateItem.title) {
     const err = new Error('Missing `title` in request body');
     err.status = 400;
