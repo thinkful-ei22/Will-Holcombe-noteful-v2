@@ -56,7 +56,7 @@ router.get('/', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   const{ id } = req.params;
   console.log('It\'s ID time baby');
-  const {tagId} = req.query;
+  //const {tagId} = req.query;
   knex
     .select('notes.id', 'title', 'content', 'folders.id as folder_id', 
       'folders.name as folderName', 'tags.name as tagName', 'tags.id as tagId')
